@@ -1,77 +1,65 @@
 #include <iostream>
-#include <cassert>
+#include <ctime>
+#include <cstdlib>
 
 #include "die.h"
 #include "roll.h"
-#include "phase.h"
+#include "shooter.h"
 #include "come_out_phase.h"
 #include "point_phase.h"
+#include "phase.h"
 
-
-class TestRoll : public Roll {
-public:
-    TestRoll(int value)
-        : Roll(dummy, dummy), forced_value(value) {}
-
-    int roll_value() const override {
-        return forced_value;
-    }
-
-private:
-    static Die dummy;
-    int forced_value;
-};
-
-Die TestRoll::dummy;
-
-// -----------------------------------------------------------
-// MAIN – tests ComeOutPhase and PointPhase
-// -----------------------------------------------------------
 int main() {
 
-    ComeOutPhase come_out;
-    PointPhase point_phase(5);  // example point = 5
+    srand(time(0));  // FIRST STATEMENT — ensures true randomness
 
-    // -------------------------------------------------------
-    // Test ComeOutPhase
-    // -------------------------------------------------------
+    Die die1;
+    Die die2;
 
-    // NATURAL: 7, 11
-    assert(come_out.get_outcome(new TestRoll(7)) == RollOutcome::natural);
-    assert(come_out.get_outcome(new TestRoll(11)) == RollOutcome::natural);
+    Shooter shooter;
 
-    // CRAPS: 2, 3, 12
-    assert(come_out.get_outcome(new TestRoll(2)) == RollOutcome::craps);
-    assert(come_out.get_outcome(new TestRoll(3)) == RollOutcome::craps);
-    assert(come_out.get_outcome(new TestRoll(12)) == RollOutcome::craps);
+    Roll* roll = shooter.throw_dice(die1, die2);
+    int rolled_value = roll->roll_value();
 
-    // POINT (any other valid value)
-    assert(come_out.get_outcome(new TestRoll(4)) == RollOutcome::point);
-    assert(come_out.get_outcome(new TestRoll(5)) == RollOutcome::point);
-    assert(come_out.get_outcome(new TestRoll(6)) == RollOutcome::point);
-    assert(come_out.get_outcome(new TestRoll(8)) == RollOutcome::point);
-    assert(come_out.get_outcome(new TestRoll(9)) == RollOutcome::point);
-    assert(come_out.get_outcome(new TestRoll(10)) == RollOutcome::point);
+    ComeOutPhase come_out_phase;
 
-    std::cout << "ComeOutPhase tests passed.\n";
+    // ------------------- COME OUT PHASE -------------------
+    while (come_out_phase.get_outcome(roll) == RollOutcome::natural ||
+           come_out_phase.get_outcome(roll) == RollOutcome::craps)
+    {
+        std::cout << "Rolled " << rolled_value << " roll again\n";
 
-    // -------------------------------------------------------
-    // Test PointPhase (point = 5)
-    // -------------------------------------------------------
+        roll = shooter.throw_dice(die1, die2);
+        rolled_value = roll->roll_value();
+    }
 
-    // Hit the point
-    assert(point_phase.get_outcome(new TestRoll(5)) == RollOutcome::point);
+    // Out of loop: this roll establishes the point
+    std::cout << "Rolled " << rolled_value << " start of point phase\n";
+    std::cout << "Roll until " << rolled_value << " or a 7 is rolled\n";
 
-    // Seven-out
-    assert(point_phase.get_outcome(new TestRoll(7)) == RollOutcome::seven_out);
+    int point = rolled_value;
 
-    // No point
-    assert(point_phase.get_outcome(new TestRoll(8)) == RollOutcome::nopoint);
-    assert(point_phase.get_outcome(new TestRoll(9)) == RollOutcome::nopoint);
-    assert(point_phase.get_outcome(new TestRoll(4)) == RollOutcome::nopoint);
+    // first roll in point phase
+    roll = shooter.throw_dice(die1, die2);
+    rolled_value = roll->roll_value();
 
-    std::cout << "PointPhase tests passed.\n";
+    PointPhase point_phase(point);
 
-    std::cout << "ALL TESTS PASSED!\n";
+    // ------------------- POINT PHASE -------------------
+    while (point_phase.get_outcome(roll) != RollOutcome::seven_out &&
+           point_phase.get_outcome(roll) != RollOutcome::nopoint)
+    {
+        std::cout << "Rolled " << rolled_value << " roll again\n";
+
+        roll = shooter.throw_dice(die1, die2);
+        rolled_value = roll->roll_value();
+    }
+
+    // Out of loop
+    std::cout << "Rolled " << rolled_value << " end of point phase\n\n";
+
+    // ------------------- DISPLAY ALL ROLLS -------------------
+    shooter.display_rolled_values();
+
     return 0;
 }
