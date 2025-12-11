@@ -5,14 +5,14 @@
 
 class Roll {
 public:
-    // Constructor takes two Die references
     Roll(Die& d1, Die& d2);
 
-    // Rolls both dice and stores the value
     void roll_dice();
 
-    // Returns the stored roll value
-    int roll_value() const;
+    // Make this virtual so test subclass can override it.
+    virtual int roll_value() const;
+
+    virtual ~Roll() = default;
 
 private:
     Die& die1;
